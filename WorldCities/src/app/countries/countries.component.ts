@@ -1,21 +1,23 @@
-import { Component, OnInit, ViewChild } from '@angular/core';
+import { Component, OnInit, ViewChild, OnDestroy } from '@angular/core';
 //import { HttpClient, HttpParams } from '@angular/common/http';
 import { environment } from './../../environments/environment';
 import { MatTableDataSource } from '@angular/material/table';
 import { MatPaginator, PageEvent } from '@angular/material/paginator';
 import { MatSort } from '@angular/material/sort';
 import { Country } from './country';
-import { Subject } from 'rxjs';
+import { Subject, takeUntil } from 'rxjs';
 import { debounceTime, distinctUntilChanged } from 'rxjs/operators';
 import { CountryService } from './country.service';
 import { ApiResult } from '../base.service';
+import { AuthService } from '../auth/auth.service';
 
 @Component({
   selector: 'app-countries',
   templateUrl: './countries.component.html',
   styleUrls: ['./countries.component.css']
 })
-export class CountriesComponent implements OnInit {
+export class CountriesComponent implements OnInit, OnDestroy
+{
   public displayedColumns: string[] = ['id', 'name', 'iso2', 'iso3', 'totCities'];
   public countries!: MatTableDataSource<Country>;
   defaultPageIndex: number = 0;
@@ -27,8 +29,12 @@ export class CountriesComponent implements OnInit {
   @ViewChild(MatPaginator) paginator!: MatPaginator;
   @ViewChild(MatSort) sort!: MatSort;
   filterTextChanged: Subject<string> = new Subject<string>();
+  private destroySubject = new Subject();
+  isLoggedIn: boolean = false;
 
-  constructor(private countryService: CountryService) {
+  constructor(private countryService: CountryService, private authService: AuthService)
+  {
+    this.isLoggedIn = authService.isAuthenticated();
   }
   ngOnInit() {
     this.loadData();
@@ -81,5 +87,11 @@ export class CountriesComponent implements OnInit {
         this.paginator.pageSize = result.pageSize;
         this.countries = new MatTableDataSource<Country>(result.data);
       }, error => console.error(error));
+  }
+
+  ngOnDestroy()
+  {
+    this.destroySubject.next(true);
+    this.destroySubject.complete();
   }
 }
